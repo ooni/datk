@@ -404,6 +404,7 @@ def extract_common(m):
         'probe_asn',
         'test_start_time',
         'report_id',
+        'test_runtime',
         'test_name'
     ]
     for field in common_fields:

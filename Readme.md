@@ -17,9 +17,6 @@ pip install oonidatk
 ## Downloading Data
 
 ```
-```
-
-```
 dc = DataCache()
 msmt_ids = download_measurements(dc,
   query={
