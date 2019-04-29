@@ -5,4 +5,4 @@ from builtins import *
 from .sync import download_measurements, DataCache
 from .utils import print_explorer_url
 
-__version__ = '0.0.1-dev.1'
+__version__ = '0.0.1-dev.2'
