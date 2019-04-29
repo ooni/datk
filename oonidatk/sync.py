@@ -1,6 +1,7 @@
 import tempfile
 import logging
 import shutil
+import json
 import os
 
 from multiprocessing.pool import ThreadPool
@@ -23,27 +24,31 @@ class DataCache(object):
     def is_cached(self, measurement_id):
         return os.path.exists(os.path.join(self.cache_dir, measurement_id))
 
-    def delete(self):
-        shutil.rmtree(self.cache_dir)
-        self.cache_dir = None
-
-    def download(self, measurement_id, measurement_url):
+    def maybe_download(self, measurement_id, measurement_url):
         dst_path = os.path.join(self.cache_dir, measurement_id)
+        if self.is_cached(measurement_id):
+            return dst_path
+
         r = requests.get(measurement_url, stream=True)
         if r.status_code == 200:
             with open(dst_path, 'wb') as f:
                 for chunk in r:
                     f.write(chunk)
-            return measurement_id
-        raise Exception("Failed to download " + measurement_id)
+        return dst_path
+
+    def delete(self):
+        shutil.rmtree(self.cache_dir)
+        self.cache_dir = None
+
+    def download(self, measurement_id, measurement_url):
+        _ = self.maybe_download(measurement_id, measurement_url)
+        return measurement_id
 
     def download_extract(self, measurement_id, measurement_url):
-        dst_path = os.path.join(self.cache_dir, measurement_id)
-        r = requests.get(measurement_url)
-        with open(dst_path, 'wb') as f:
-            f.write(r.content)
+        dst_path = self.maybe_download(measurement_id, measurement_url)
+        with open(dst_path, 'r') as in_file:
+            j = json.load(in_file)
 
-        j = r.json()
         test_name = j['test_name']
         d = extract_common(j)
         if test_name in extractors:
@@ -68,11 +73,7 @@ def download_measurements(cache, query={}, concurrency=10, extract=False):
 
     downloaded_msmts = []
     while True:
-        id_url = list(
-            filter(
-                lambda x: not cache.is_cached(x[0]),
-                   map(lambda x: (x['measurement_id'], x['measurement_url']), j['results'])
-        ))
+        id_url = list(map(lambda x: (x['measurement_id'], x['measurement_url']), j['results']))
         for t in thread_pool.imap_unordered(lambda x: download_func(x[0], x[1]), id_url):
             downloaded_msmts.append(t)
 
