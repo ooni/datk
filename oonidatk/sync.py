@@ -45,9 +45,10 @@ class DataCache(object):
 
         j = r.json()
         test_name = j['test_name']
+        d = extract_common(j)
         if test_name in extractors:
-            return extractors[test_name](j)
-        return extract_common(j)
+            d.update(extractors[test_name](j))
+        return d
 
 def download_measurements(cache, query={}, concurrency=10, extract=False):
     download_func = cache.download
