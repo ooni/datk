@@ -1,10 +1,10 @@
 from __future__ import print_function
 
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
     extra = {}
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup, find_packages
     extra = {}
 
 import sys
@@ -12,8 +12,11 @@ import sys
 from oonidatk import __version__
 
 def readme():
-    with open('Readme.md') as f:
-        return f.read()
+    try:
+        with open('Readme.md') as f:
+            return f.read()
+    except:
+        return ''
 
 setup(name = 'oonidatk',
       version = __version__,
@@ -23,8 +26,7 @@ setup(name = 'oonidatk',
       author_email = 'contact@openobservatory.org',
       scripts = [],
       url = 'https://github.com/ooni/datk/',
-      packages = ['oonidatk'],
-      package_data = {},
+      packages = find_packages(),
       license = 'BSD-2-Clause',
       platforms = 'Posix; MacOS X; Windows',
       classifiers = ['Development Status :: 2 - Pre-Alpha',
