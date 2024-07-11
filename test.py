@@ -1,0 +1,4 @@
+from oonidatk.tests.test_data import test_download_measurements, test_download_measurements_extract
+
+test_download_measurements()
+test_download_measurements_extract()

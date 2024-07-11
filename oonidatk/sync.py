@@ -1,5 +1,4 @@
 import tempfile
-import logging
 import shutil
 import json
 import os
@@ -11,13 +10,17 @@ import requests
 from .extractors import extractors, extract_common
 
 OONI_API_BASE_URL = 'https://api.ooni.io/api/v1/'
-MEASUREMENTS_PER_PAGE = 100000
+MEASUREMENTS_PER_PAGE = 100_000
+
 
 class DataCache(object):
     '''
     Will cache downloaded measurements so that they don't have to be
     re-downloaded. It works by downloading them to a temporary directory.
     '''
+
+    cache_dir: str = ''
+
     def __init__(self):
         self.cache_dir = tempfile.mkdtemp(suffix='oomsmtcache', prefix='tmp')
 
@@ -38,7 +41,7 @@ class DataCache(object):
 
     def delete(self):
         shutil.rmtree(self.cache_dir)
-        self.cache_dir = None
+        self.cache_dir = ''
 
     def download(self, measurement_id, measurement_url):
         _ = self.maybe_download(measurement_id, measurement_url)
@@ -55,6 +58,7 @@ class DataCache(object):
             d.update(extractors[test_name](j))
         return d
 
+
 def download_measurements(cache, query={}, concurrency=10, extract=False):
     download_func = cache.download
     if extract is True:
@@ -62,19 +66,27 @@ def download_measurements(cache, query={}, concurrency=10, extract=False):
 
     thread_pool = ThreadPool(concurrency)
 
-    query = dict(query, limit=MEASUREMENTS_PER_PAGE, order_by='test_start_time')
+    query = dict(query, limit=MEASUREMENTS_PER_PAGE,
+                 order_by='test_start_time')
     r = requests.get(
         OONI_API_BASE_URL+'measurements',
         params=query
     )
     j = r.json()
-    if j['metadata']['count'] >= MEASUREMENTS_PER_PAGE:
-        logging.warning('Your query is very broad. Pagination may be very slow in retrieving this data')
 
     downloaded_msmts = []
     while True:
-        id_url = list(map(lambda x: (x['measurement_id'], x['measurement_url']), j['results']))
-        for t in thread_pool.imap_unordered(lambda x: download_func(x[0], x[1]), id_url):
+        print("Measurements obtained: " + str(len(downloaded_msmts)), end='\r')
+        id_url = list(
+            map(
+                lambda x: (
+                    x['measurement_uid'], x['measurement_url']
+                ), j['results']
+            )
+        )
+        for t in thread_pool.imap_unordered(
+                lambda x: download_func(x[0], x[1]),
+                id_url):
             downloaded_msmts.append(t)
 
         next_url = j['metadata']['next_url']
@@ -83,4 +95,5 @@ def download_measurements(cache, query={}, concurrency=10, extract=False):
         else:
             break
 
+    print(str(len(downloaded_msmts)) + " Measurements downloaded.")
     return downloaded_msmts
